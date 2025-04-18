@@ -87,8 +87,8 @@ size_t board_index = 0;
 static inline void append_move(board_history_t *history, int move)
 {
     size_t move_idx = history->length;
-    size_t idx = (move_idx * BOARD_SIZE_SQUARE_LOG2) >> 3;
-    size_t bit = (move_idx * BOARD_SIZE_SQUARE_LOG2) & 7;
+    size_t idx = (move_idx * BOARD_HISTORY_ELE_BITS) >> 3;
+    size_t bit = (move_idx * BOARD_HISTORY_ELE_BITS) & 7;
     history->moves[idx] |= (move << bit);
     history->length++;
     pr_info("kxo: %s: append move: %d\n", __func__, move);

@@ -101,10 +101,9 @@ static void listen_keyboard_handler(void)
                     continue;
                 printf("Moves: ");
                 for (size_t i = 0; i < history->length; i++) {
-                    size_t idx = (i * BOARD_SIZE_SQUARE_LOG2) >> 3;
-                    size_t bit = (i * BOARD_SIZE_SQUARE_LOG2) & 7;
-                    int move = (history->moves[idx] >> bit) &
-                               ((1 << BOARD_SIZE_SQUARE_LOG2) - 1);
+                    size_t idx = (i * BOARD_HISTORY_ELE_BITS) >> 3;
+                    size_t bit = (i * BOARD_HISTORY_ELE_BITS) & 7;
+                    int move = (history->moves[idx] >> bit) & 7;
                     int row = GET_ROW(move);
                     int col = GET_COL(move);
                     if (i != 0)
