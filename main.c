@@ -451,6 +451,9 @@ static atomic_t open_cnt;
 static int kxo_open(struct inode *inode, struct file *filp)
 {
     pr_debug("kxo: %s\n", __func__);
+    attr_obj.display = '1';
+    attr_obj.resume = '1';
+    attr_obj.end = '0';
     if (atomic_inc_return(&open_cnt) == 1)
         mod_timer(&timer, jiffies + msecs_to_jiffies(delay));
     pr_info("openm current cnt: %d\n", atomic_read(&open_cnt));
@@ -567,9 +570,6 @@ static int __init kxo_init(void)
     turn = 'O';
     finish = 1;
 
-    attr_obj.display = '1';
-    attr_obj.resume = '1';
-    attr_obj.end = '0';
     rwlock_init(&attr_obj.lock);
     /* Setup the timer */
     timer_setup(&timer, timer_handler, 0);
