@@ -7,7 +7,9 @@
 #include <string.h>
 #include <sys/ioctl.h>
 #include <sys/select.h>
+#include <sys/time.h>
 #include <termios.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "game.h"
@@ -138,6 +140,18 @@ void print_board(const char *board_data)
     }
 }
 
+/* Print the current time in YYYY-MM-DD HH:MM:SS format */
+void print_time(void)
+{
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+
+    char time_str[20];
+    strftime(time_str, sizeof(time_str), "%Y-%m-%d %H:%M:%S",
+             localtime(&tv.tv_sec));
+    printf("Current time: %s\n", time_str);
+}
+
 int main(int argc, char *argv[])
 {
     if (!status_check())
@@ -174,6 +188,7 @@ int main(int argc, char *argv[])
             printf("\033[H\033[J"); /* ASCII escape code to clear the screen */
             read(device_fd, board_data, BOARD_DATA_SIZE);
             print_board(board_data);
+            print_time();
         }
     }
 
