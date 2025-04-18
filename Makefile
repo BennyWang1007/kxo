@@ -12,7 +12,7 @@ all: kmod xo-user
 kmod: $(GIT_HOOKS) main.c
 	$(MAKE) -C $(KDIR) M=$(PWD) modules
 
-xo-user: xo-user.c
+xo-user: xo-user.c game.h
 	$(CC) $(ccflags-y) -o $@ $<
 
 $(GIT_HOOKS):

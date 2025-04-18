@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/ioctl.h>
 #include <sys/select.h>
 #include <termios.h>
 #include <unistd.h>
@@ -54,6 +55,9 @@ static void raw_mode_enable(void)
 
 static bool read_attr, end_attr;
 
+board_history_t histories[HISTORY_SIZE] = {0};
+size_t board_index = 0;
+
 static void listen_keyboard_handler(void)
 {
     int attr_fd = open(XO_DEVICE_ATTR_FILE, O_RDWR);
@@ -77,6 +81,40 @@ static void listen_keyboard_handler(void)
             end_attr = true;
             write(attr_fd, buf, 6);
             printf("Stopping the kernel space tic-tac-toe game...\n");
+
+            int device_fd = open(XO_DEVICE_FILE, O_RDONLY);
+
+            if (device_fd == -1) {
+                perror("open");
+                exit(1);
+            }
+
+            if (ioctl(device_fd, KXO_GET_BOARD_HISTORY, &histories) == -1) {
+                perror("ioctl");
+                exit(1);
+            }
+
+            printf("Game history:\n");
+            for (size_t j = 0; j < HISTORY_SIZE; j++) {
+                board_history_t *history = &histories[j];
+                if (history->length == 0)
+                    continue;
+                printf("Moves: ");
+                for (size_t i = 0; i < history->length; i++) {
+                    size_t idx = (i * BOARD_SIZE_SQUARE_LOG2) >> 3;
+                    size_t bit = (i * BOARD_SIZE_SQUARE_LOG2) & 7;
+                    int move = (history->moves[idx] >> bit) &
+                               ((1 << BOARD_SIZE_SQUARE_LOG2) - 1);
+                    int row = GET_ROW(move);
+                    int col = GET_COL(move);
+                    if (i != 0)
+                        printf(" -> ");
+                    printf("%c%d", (col + 'A'), (row + 1));
+                }
+                printf("\n");
+            }
+            close(device_fd);
+
             break;
         }
     }

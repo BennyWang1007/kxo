@@ -80,6 +80,41 @@ static struct cdev kxo_cdev;
 
 static char board_data[BOARD_DATA_SIZE] = {0};
 
+board_history_t histories[HISTORY_SIZE] = {0};
+size_t board_index = 0;
+
+
+static inline void append_move(board_history_t *history, int move)
+{
+    size_t move_idx = history->length;
+    size_t idx = (move_idx * BOARD_SIZE_SQUARE_LOG2) >> 3;
+    size_t bit = (move_idx * BOARD_SIZE_SQUARE_LOG2) & 7;
+    history->moves[idx] |= (move << bit);
+    history->length++;
+    pr_info("kxo: %s: append move: %d\n", __func__, move);
+}
+
+/* Append a move to the current board history */
+inline void history_append_move(int move)
+{
+    append_move(&histories[board_index], move);
+}
+
+/* Switch to the next board history */
+static void history_next_board(void)
+{
+    if (board_index == HISTORY_SIZE - 1) {
+        for (int i = 0; i < HISTORY_SIZE - 1; i++) {
+            histories[i] = histories[i + 1];
+        }
+        histories[HISTORY_SIZE - 1].length = 0;
+        memset(histories[HISTORY_SIZE - 1].moves, 0,
+               sizeof(histories[HISTORY_SIZE - 1].moves));
+    } else {
+        board_index++;
+    }
+}
+
 /* Data are stored into a kfifo buffer before passing them to the userspace */
 static DECLARE_KFIFO_PTR(rx_fifo, unsigned char);
 
@@ -202,8 +237,10 @@ static void ai_one_work_func(struct work_struct *w)
 
     smp_mb();
 
-    if (move != -1)
+    if (move != -1) {
         WRITE_ONCE(table[move], 'O');
+        history_append_move(move);
+    }
 
     WRITE_ONCE(turn, 'X');
     WRITE_ONCE(finish, 1);
@@ -236,8 +273,10 @@ static void ai_two_work_func(struct work_struct *w)
 
     smp_mb();
 
-    if (move != -1)
+    if (move != -1) {
         WRITE_ONCE(table[move], 'X');
+        history_append_move(move);
+    }
 
     WRITE_ONCE(turn, 'O');
     WRITE_ONCE(finish, 1);
@@ -352,6 +391,7 @@ static void timer_handler(struct timer_list *__timer)
         }
 
         if (attr_obj.end == '0') {
+            history_next_board();
             memset(table, ' ',
                    N_GRIDS); /* Reset the table so the game restart */
             mod_timer(&timer, jiffies + msecs_to_jiffies(delay));
@@ -431,12 +471,31 @@ static int kxo_release(struct inode *inode, struct file *filp)
     return 0;
 }
 
+/* Return the size and board to user */
+static long kxo_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+{
+    switch (cmd) {
+    case KXO_GET_BOARD_HISTORY:
+        if (copy_to_user((void __user *) arg, histories,
+                         sizeof(board_history_t) * HISTORY_SIZE))
+            return -EFAULT;
+        pr_info("kxo: %s sending board history to user\n", __func__);
+        break;
+    default:
+        pr_err("kxo: unknown ioctl command: %u\n", cmd);
+        return -EINVAL;
+    }
+
+    return 0;
+}
+
 static const struct file_operations kxo_fops = {
     .read = kxo_read,
     .llseek = no_llseek,
     .open = kxo_open,
     .release = kxo_release,
     .owner = THIS_MODULE,
+    .unlocked_ioctl = kxo_ioctl,
 };
 
 static int __init kxo_init(void)
