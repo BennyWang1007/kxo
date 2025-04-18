@@ -1,6 +1,7 @@
 #include <fcntl.h>
 #include <getopt.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -82,6 +83,24 @@ static void listen_keyboard_handler(void)
     close(attr_fd);
 }
 
+void print_board(const char *board_data)
+{
+    for (int i = 0; i < BOARD_SIZE; i++) {
+        for (int j = 0; j < BOARD_SIZE; j++) {
+            size_t idx = GET_INDEX(i, j);
+            size_t byte_idx = idx >> 2;
+            size_t bit_idx = (idx & 3) << 1;
+            if (board_data[byte_idx] & (1 << bit_idx))
+                printf("X ");
+            else if (board_data[byte_idx] & (1 << (bit_idx + 1)))
+                printf("O ");
+            else
+                printf(". ");
+        }
+        printf("\n");
+    }
+}
+
 int main(int argc, char *argv[])
 {
     if (!status_check())
@@ -91,7 +110,7 @@ int main(int argc, char *argv[])
     int flags = fcntl(STDIN_FILENO, F_GETFL, 0);
     fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK);
 
-    char display_buf[DRAWBUFFER_SIZE];
+    char board_data[BOARD_DATA_SIZE];
 
     fd_set readset;
     int device_fd = open(XO_DEVICE_FILE, O_RDONLY);
@@ -116,8 +135,8 @@ int main(int argc, char *argv[])
         } else if (read_attr && FD_ISSET(device_fd, &readset)) {
             FD_CLR(device_fd, &readset);
             printf("\033[H\033[J"); /* ASCII escape code to clear the screen */
-            read(device_fd, display_buf, DRAWBUFFER_SIZE);
-            printf("%s", display_buf);
+            read(device_fd, board_data, BOARD_DATA_SIZE);
+            print_board(board_data);
         }
     }
 

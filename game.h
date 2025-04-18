@@ -1,6 +1,12 @@
 #pragma once
 
 #define BOARD_SIZE 4
+#define BOARD_SIZE_LOG2 2        /* ceiling(log2(BOARD_SIZE)) */
+#define BOARD_SIZE_SQUARE_LOG2 4 /* ceiling(log2(BOARD_SIZE * BOARD_SIZE)) */
+
+#define BOARD_DATA_SIZE \
+    ((BOARD_SIZE * BOARD_SIZE + 3) / 4 + 1) /* 4 of 2-byte per char */
+
 #define GOAL 3
 #define ALLOW_EXCEED 1
 #define N_GRIDS (BOARD_SIZE * BOARD_SIZE)
