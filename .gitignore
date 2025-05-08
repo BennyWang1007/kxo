@@ -7,3 +7,7 @@
 *.cmd
 *.symvers
 xo-user
+.vscode
+.gitignore
+* copy*
+diffs.txt

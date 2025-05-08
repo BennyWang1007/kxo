@@ -12,8 +12,8 @@ all: kmod xo-user
 kmod: $(GIT_HOOKS) main.c
 	$(MAKE) -C $(KDIR) M=$(PWD) modules
 
-xo-user: xo-user.c game.h
-	$(CC) $(ccflags-y) -o $@ $<
+xo-user: xo-user.c game.h coroutine.h
+	$(CC) $(ccflags-y) -o $@ $< coroutine.c
 
 $(GIT_HOOKS):
 	@scripts/install-git-hooks
